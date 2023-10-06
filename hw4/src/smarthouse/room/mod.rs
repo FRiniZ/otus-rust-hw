@@ -16,6 +16,17 @@ impl SmartRoom {
         }
     }
 
+    /// Add SmartDevice into room
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smarthouse::room::SmartRoom;
+    /// use homework4::smartdevices::socket::SmartSocket;
+    ///
+    /// let mut ss = SmartSocket::new("socket1", "brief");
+    /// let mut sr = SmartRoom::new ("room1");
+    /// assert!(sr.add_device(&mut ss))
+    /// ```
     pub fn add_device(&mut self, dev: &mut impl SmartDevice) -> bool {
         if self.devices.contains(dev.get_name()) {
             return false;

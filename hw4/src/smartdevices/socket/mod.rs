@@ -23,22 +23,58 @@ impl SmartSocket {
         }
     }
 
-    /// Return brief as &str
-    ///  # Examples
+    /// Returs brief as &str
+    ///  # Example
     ///
     /// ```
+    /// use homework4::smartdevices::socket::SmartSocket;
+    ///
     /// let ss = SmartSocket::new("socket1", "brief");
-    /// println!("{}", ss.brief)
+    /// println!("{}", ss.brief())
     /// ```
     pub fn brief(&self) -> &str {
         &self.brief
     }
+
+    /// Enables power
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smartdevices::socket::SmartSocket;
+    /// use homework4::smartdevices::SmartDevice;
+    ///
+    /// let mut ss = SmartSocket::new("socket1", "brief");
+    /// ss.on();
+    /// println!("{}", ss.get_state())
+    /// ```
     pub fn on(&mut self) {
         self.state = true;
     }
+
+    /// Disables power
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smartdevices::socket::SmartSocket;
+    /// use homework4::smartdevices::SmartDevice;
+    ///
+    /// let mut ss = SmartSocket::new("socket1", "brief");
+    /// ss.off();
+    /// println!("{}", ss.get_state())
+    /// ```
     pub fn off(&mut self) {
         self.state = false;
     }
+
+    /// Returns power consumption as f32 value
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smartdevices::socket::SmartSocket;
+    ///
+    /// let ss = SmartSocket::new("socket1", "brief");
+    /// println!("{}", ss.power_consumption());
+    /// ```
     pub fn power_consumption(&self) -> f32 {
         if self.state {
             rand::thread_rng().gen_range(0.01..220.00)

@@ -17,10 +17,36 @@ impl SmartHouse {
         }
     }
 
+    /// Add SmartRoom into house
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smarthouse::room::SmartRoom;
+    /// use homework4::smarthouse::SmartHouse;
+    ///
+    /// let mut sh = SmartHouse::new ("house1");
+    /// let mut sr = SmartRoom::new ("room1");
+    /// sh.add_room(sr);
+    ///
+    /// assert_eq!(sh.count_rooms(), 1);
+    /// ```
     pub fn add_room(&mut self, room: SmartRoom) {
         self.rooms.insert(room.name.clone(), room);
     }
 
+    /// Returns Vec with names of rooms
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smarthouse::room::SmartRoom;
+    /// use homework4::smarthouse::SmartHouse;
+    ///
+    /// let mut sh = SmartHouse::new ("house1");
+    /// let mut sr = SmartRoom::new ("room1");
+    /// sh.add_room(sr);
+    ///
+    /// assert_eq!(sh.get_rooms(), vec!["room1"]);
+    /// ```
     pub fn get_rooms(&self) -> Vec<String> {
         let mut rc: Vec<String> = Vec::new();
         for room in self.rooms.iter() {
@@ -29,6 +55,22 @@ impl SmartHouse {
         rc
     }
 
+    /// Returns Vec with names of devices from room
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smartdevices::socket::SmartSocket;
+    /// use homework4::smarthouse::room::SmartRoom;
+    /// use homework4::smarthouse::SmartHouse;
+    ///
+    /// let mut sh = SmartHouse::new ("house1");
+    /// let mut sr = SmartRoom::new ("room1");
+    /// let mut ss = SmartSocket::new("socket1", "brief");
+    /// sr.add_device(&mut ss);
+    /// sh.add_room(sr);
+    ///
+    /// assert_eq!(sh.devices("room1"), vec!["socket1"]);
+    /// ```
     pub fn devices(&self, room: &str) -> Vec<String> {
         let mut rc: Vec<String> = Vec::new();
 
@@ -44,6 +86,10 @@ impl SmartHouse {
 
     pub fn create_report(&self, provider: &impl DeviceInfoProvider) -> String {
         provider.get_device_state(self)
+    }
+
+    pub fn count_rooms(&self) -> usize {
+        self.rooms.len()
     }
 }
 

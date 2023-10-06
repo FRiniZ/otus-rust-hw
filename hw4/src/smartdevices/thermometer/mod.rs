@@ -22,6 +22,15 @@ impl SmartThermometer {
         }
     }
 
+    /// Returs current temperature as f32
+    ///  # Example
+    ///
+    /// ```
+    /// use homework4::smartdevices::thermometer::SmartThermometer;
+    ///
+    /// let ss = SmartThermometer::new("thermometer1", -40.0, 60.0);
+    /// println!("{}", ss.temperature())
+    /// ```
     pub fn temperature(&self) -> &f32 {
         &self.temperature
     }

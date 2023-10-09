@@ -1,0 +1,11 @@
+[package]
+name = "homework4"
+version = "0.1.0"
+edition = "2021"
+
+[[example]]
+name = "example1"
+path = "examples/example1.rs"
+
+[dependencies]
+rand = "0.8.5"

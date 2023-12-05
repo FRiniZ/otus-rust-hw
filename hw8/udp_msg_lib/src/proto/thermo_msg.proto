@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+package thermomessages;
+
+message ThermoMsg {
+  optional float temperature = 1;
+}

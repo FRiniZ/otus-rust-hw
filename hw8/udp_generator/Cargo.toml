@@ -1,0 +1,17 @@
+[package]
+name = "udp_generator"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+prost = "0.12.3"
+prost-types = "0.12.3"
+futures = "0.3.29"
+crossbeam-channel = "0.5.8"
+ctrlc = "3.4.1"
+getopts = "0.2.21"
+udp_msg_lib = { path = "../udp_msg_lib"}
+
+[build-dependencies]
+prost-build = "0.12.3"

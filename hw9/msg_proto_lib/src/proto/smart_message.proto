@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package SmartMessages;
+
+message ThermoMsg {
+  optional float temperature = 1;
+}
+
+message SocketMsg {
+  optional bool state       = 1;
+  optional float power      = 2;
+}
+
+enum SmartMsgType{
+   NONE    = 0;
+   SOCKET  = 1;
+   THERMO  = 2;
+}
+
+message SmartMsg {
+  required SmartMsgType   type       = 1 [default = NONE];
+  optional ThermoMsg      thermo_msg = 2;
+  optional SocketMsg      socket_msg = 3;
+}

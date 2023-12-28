@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package CmdMessages;
+
+message CmdRequest {
+  optional string command       = 1;
+  repeated string arguments     = 2;
+}
+
+message CmdResponce {
+  optional string responce      = 1; 
+}

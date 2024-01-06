@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["msg_proto_lib", "udp_socket_lib", "udp_thermometer_lib", "examples"]

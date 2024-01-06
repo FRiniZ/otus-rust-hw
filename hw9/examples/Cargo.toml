@@ -1,0 +1,35 @@
+[package]
+name = "examples"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "use_thermo"
+path = "src/use_thermo.rs"
+
+[[bin]]
+name = "udpgen"
+path = "src/udpthermo_generator.rs"
+
+[[bin]]
+name = "server_socket"
+path = "src/server_socket.rs"
+
+[[bin]]
+name = "client_socket"
+path = "src/client_socket.rs"
+
+
+[dependencies]
+prost = "0.12.3"
+prost-types = "0.12.3"
+futures = "0.3.29"
+crossbeam-channel = "0.5.8"
+getopts = "0.2.21"
+tokio = { version = "1.35.1", features = ["full"] }
+msg_proto_lib = { path = "../msg_proto_lib"}
+udp_thermometer = { path = "../udp_thermometer_lib/"}
+udp_socket = { path = "../udp_socket_lib/"}
+ctrlc-async = "3.2.2"
+ctrlc = "3.4.2"

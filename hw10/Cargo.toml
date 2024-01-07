@@ -1,0 +1,18 @@
+[[example]]
+name = "example1"
+path = "examples/progress_dyn.rs"
+
+[[example]]
+name = "example2"
+path = "examples/progress_gen.rs"
+
+
+[package]
+name = "hw10"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+termsize = "0.1.6"

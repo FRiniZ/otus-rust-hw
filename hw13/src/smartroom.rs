@@ -1,7 +1,7 @@
 use crate::smartdevice::SmartDevice;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SmartRoom {
     pub id: i64,
     pub name: String,

@@ -92,6 +92,7 @@ impl SmartHouseDbApi {
     }
 
     pub async fn select_room_by_name(&self, name: &String) -> Result<SmartRoom, sqlx::Error> {
+        info!("DB: /select_room_by_name: {}", name);
         let row =
             sqlx::query(format!("SELECT id, name FROM rooms WHERE name = \"{}\";", name).as_str())
                 .fetch_one(&self.db)
@@ -104,6 +105,7 @@ impl SmartHouseDbApi {
             name,
             devices: vec![],
         };
+        info!("DB: Found {:?}", room);
         Ok(room)
     }
 

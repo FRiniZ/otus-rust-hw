@@ -4,7 +4,7 @@ use crate::smartdevice::{SmartDevice, SmartDeviceType, SmartDeviceUpdate};
 use crate::smartroom::SmartRoom;
 use actix_web::http::StatusCode;
 use actix_web::{body::BoxBody, HttpResponse, ResponseError};
-use log::error;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -61,6 +61,7 @@ impl ResponseError for SmartHouseError {
 
 impl SmartHouse {
     pub async fn new(name: String, db_url: &str) -> Result<Self, SmartHouseError> {
+        info!("HTTP-REST API for SmartHouse({})", name);
         let db = SmartHouseDbApi::new(db_url).await?;
         let home = SmartHouse { name, db };
         Ok(home)

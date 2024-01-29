@@ -10,9 +10,6 @@ mod smartthermometer;
 
 use std::env;
 
-use crate::smartdevice::SmartDevice;
-use crate::smartsocket::SmartSocket;
-
 use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use log::{self, info};
@@ -28,13 +25,9 @@ async fn main() -> std::io::Result<()> {
     let host = env::var("HOST").expect("HOST not set");
     let port = env::var("PORT").expect("PORT not set");
     let db_url = env::var("DB_URL").expect("DB_URL not set");
+    let house_name = env::var("NAME").expect("NAME not set");
 
-    let sr = SmartDevice::Socket(SmartSocket::default());
-    let j = serde_json::to_string(&sr);
-
-    info!("JSON:{:?}", j);
-
-    let smarthouse = SmartHouse::new(String::from("Sweet Дом"), db_url.as_str())
+    let smarthouse = SmartHouse::new(String::from(house_name), db_url.as_str())
         .await
         .unwrap();
 
@@ -49,6 +42,7 @@ async fn main() -> std::io::Result<()> {
             .service(router::rooms)
             .service(router::room_new)
             .service(router::room_by_id)
+            .service(router::room_by_name)
             .service(router::room_devices)
             .service(router::room_del_by_id)
             .service(router::devices)

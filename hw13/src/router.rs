@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{
     smartdevice::{SmartDeviceParams, SmartDeviceUpdate},
     smarthouse::{SmartHouse, SmartHouseError},
@@ -38,6 +40,19 @@ async fn room_by_id(
     debug!("get /rooms/{}", id);
     let home = data.lock().await;
     let res = home.room_by_id(*id).await?;
+    Ok(HttpResponse::Ok()
+        .content_type("text/plain; charset=utf-8")
+        .json(res))
+}
+
+#[get("/rooms/by_name/{name}")]
+async fn room_by_name(
+    data: web::Data<Mutex<SmartHouse>>,
+    name: web::Path<String>,
+) -> Result<HttpResponse, SmartHouseError> {
+    debug!("get /rooms/by_name/{}", name);
+    let home = data.lock().await;
+    let res = home.room_by_name(&name.deref()).await?;
     Ok(HttpResponse::Ok()
         .content_type("text/plain; charset=utf-8")
         .json(res))
@@ -109,7 +124,7 @@ async fn device_new(
     name: web::Path<String>,
     json: web::Json<SmartDeviceParams>,
 ) -> Result<HttpResponse, SmartHouseError> {
-    debug!("post /device/{} json:{:?}", name, json);
+    debug!("post /devices/{} json:{:?}", name, json);
     if json.room_id.is_none() {
         return Err(SmartHouseError::JsonError(String::from(
             "miss room_id field",

@@ -45,7 +45,7 @@ pub enum SmartHouseError {
 
 impl From<sqlx::Error> for SmartHouseError {
     fn from(value: sqlx::Error) -> Self {
-        SmartHouseError::DBError(format!("{}", value.to_string()))
+        SmartHouseError::DBError(value.to_string())
     }
 }
 

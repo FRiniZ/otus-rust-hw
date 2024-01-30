@@ -27,9 +27,7 @@ async fn main() -> std::io::Result<()> {
     let db_url = env::var("DB_URL").expect("DB_URL not set");
     let house_name = env::var("NAME").expect("NAME not set");
 
-    let smarthouse = SmartHouse::new(String::from(house_name), db_url.as_str())
-        .await
-        .unwrap();
+    let smarthouse = SmartHouse::new(house_name, db_url.as_str()).await.unwrap();
 
     info!("Starting server[{}:{}]", host, port);
 

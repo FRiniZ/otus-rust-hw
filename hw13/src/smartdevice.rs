@@ -71,6 +71,20 @@ impl SmartDevice {
             SmartDevice::Thermometer(t) => t.get_report(),
         }
     }
+
+    pub fn get_id(&self) -> i64 {
+        match self {
+            SmartDevice::Socket(s) => s.id,
+            SmartDevice::Thermometer(t) => t.id,
+        }
+    }
+
+    pub fn get_room_id(&self) -> i64 {
+        match self {
+            SmartDevice::Socket(s) => s.room_id,
+            SmartDevice::Thermometer(t) => t.room_id,
+        }
+    }
 }
 
 impl FromStr for SmartDeviceType {

@@ -52,7 +52,7 @@ async fn room_by_name(
 ) -> Result<HttpResponse, SmartHouseError> {
     debug!("get /rooms/by_name/{}", name);
     let home = data.lock().await;
-    let res = home.room_by_name(&name.deref()).await?;
+    let res = home.room_by_name(name.deref()).await?;
     Ok(HttpResponse::Ok()
         .content_type("text/plain; charset=utf-8")
         .json(res))
@@ -92,7 +92,7 @@ async fn room_del_by_id(
     debug!("delete /rooms/by_id/{}", id);
     let home = data.lock().await;
     let res = home.room_del_by_id(*id).await?;
-    Ok(HttpResponse::Accepted().json(res))
+    Ok(HttpResponse::Ok().json(res))
 }
 
 #[get("/devices")]
@@ -152,7 +152,7 @@ async fn device_del_by_id(
     debug!("delete /devices/{}", id);
     let home = data.lock().await;
     let res = home.device_del_by_id(*id).await?;
-    Ok(HttpResponse::Accepted().json(res))
+    Ok(HttpResponse::Ok().json(res))
 }
 
 #[put("/devices/{id}")]

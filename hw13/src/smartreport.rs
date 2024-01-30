@@ -18,7 +18,7 @@ pub struct SmartReportParams {
     pub request: Vec<SmartReportRequest>,
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SmartReport {
     pub reports: Vec<SmartReportResponce>,
 }

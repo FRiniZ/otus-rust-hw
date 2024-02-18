@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package kafka_messages;
+
+message KafkaMessage {
+  optional bytes key = 1;
+  optional bytes value = 2;
+  optional uint32 partition = 3;
+  repeated bytes headers = 4;
+}

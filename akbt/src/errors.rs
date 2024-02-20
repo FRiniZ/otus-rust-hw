@@ -4,8 +4,10 @@ use thiserror::Error;
 pub enum AppError {
     #[error("rdkafka error")]
     Kafka(#[from] rdkafka::error::KafkaError),
-    #[error("Topic:{} not found", 0)]
+    #[error("Topic:{0} not found")]
     TopicNotFound(String),
-    #[error("Can't write to file")]
+    #[error("IoError")]
     IoError(#[from] std::io::Error),
+    #[error("Be careful the file: `{0}` is exists")]
+    FileExists(String),
 }

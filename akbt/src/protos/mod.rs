@@ -32,7 +32,7 @@ pub mod kafka_messages {
         Ok(res.unwrap())
     }
 
-    pub fn kafka_message_len(msg: &KafkaMessage) -> u32 {
-        msg.encoded_len() as u32
+    pub fn kafka_message_len(msg: &KafkaMessage) -> usize {
+        msg.encoded_len()
     }
 }

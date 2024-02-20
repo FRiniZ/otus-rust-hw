@@ -1,6 +1,6 @@
 mod backup;
 mod errors;
-mod helpers;
+mod gzwriter;
 mod protos;
 
 use std::fmt::Display;
@@ -19,11 +19,15 @@ struct Args {
     cmd: Commands,
     #[arg(short, long, env("FILE"))]
     file: String,
+    #[arg(short, long)]
+    n_wrk: usize,
 }
 
 #[derive(Subcommand, Debug, Clone)]
 enum Commands {
+    /// Backup topic to file
     Backup,
+    /// Restore topic from file
     Restore,
 }
 
@@ -48,11 +52,15 @@ fn main() {
     info!("Command: {}", _cli.cmd);
 
     let result = match _cli.cmd {
-        Commands::Backup => backup::backup(_cli.bootstrap_servers, _cli.topic, _cli.file),
+        Commands::Backup => {
+            backup::backup(_cli.n_wrk, _cli.bootstrap_servers, _cli.topic, _cli.file)
+        }
         Commands::Restore => todo!(),
     };
 
-    info!("Result:{:?}", result);
+    if result.is_err() {
+        println!("{:?}", result.unwrap_err().to_string());
+    }
 
-    info!("Bye bye");
+    println!("Bye bye");
 }

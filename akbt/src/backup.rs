@@ -4,26 +4,32 @@ use rdkafka::{
     ClientConfig, ClientContext, Message, TopicPartitionList,
 };
 
-use std::{sync::mpsc::SyncSender, thread, time::Duration};
+use std::{
+    sync::{mpsc::SyncSender, Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use crate::{
     errors::AppError,
-    gzwriter::GzWriter,
-    protos::kafka_messages::{kafka_message_new, KafkaMessage},
+    gzwriter::{GzMsg, GzWriter},
+    protos::kafka_messages::{kafka_message_len, kafka_message_new, kafka_message_pack},
 };
 
-const PB_PROCESS: &str = "{spinner:.green} {msg:>4} {elapsed_precise} {bar:.green/red} ETA:{eta}";
-const PB_FINISH: &str = "{spinner:.green} {msg:>4} {elapsed_precise} {bar:.green/red} done";
+const PB_PROCESS: &str = "{spinner:.green} {msg:>4} {bar:.green/red} ETA:{eta}";
+const PB_FINISH: &str = "{spinner:.green} {msg:>4} {bar:.green/red} done";
 
 struct Backup {
     _id: i32,
-    consumer: BaseConsumer<BackupContext>,
+    brokers: String,
+    topic_name: String,
     _offset_begin: i64,
     offset_end: i64,
     progress_bar: ProgressBar,
-    sender: SyncSender<Vec<KafkaMessage>>,
+    sender: SyncSender<GzMsg>,
+    messages_counter: Arc<Mutex<u64>>,
 }
 
 impl Backup {
@@ -34,17 +40,31 @@ impl Backup {
         offset_begin: i64,
         offset_end: i64,
         progress_bar: ProgressBar,
-        sender: SyncSender<Vec<KafkaMessage>>,
+        sender: SyncSender<GzMsg>,
+        messages_counter: Arc<Mutex<u64>>,
     ) -> Result<Self, AppError> {
+        Ok(Self {
+            _id: id,
+            brokers,
+            topic_name,
+            _offset_begin: offset_begin,
+            offset_end,
+            progress_bar,
+            sender,
+            messages_counter,
+        })
+    }
+
+    pub fn start(self) {
         let context = BackupContext;
         let consumer: BaseConsumer<BackupContext> = ClientConfig::new()
-            .set("bootstrap.servers", &brokers)
+            .set("bootstrap.servers", self.brokers)
             .set("group.id", "akbt")
             .create_with_context(context)
             .expect("Consumer creation failed");
 
         let mut partitions = TopicPartitionList::with_capacity(1);
-        partitions.add_partition(&topic_name, id);
+        partitions.add_partition(&self.topic_name, self._id);
         partitions
             .set_all_offsets(rdkafka::Offset::Beginning)
             .unwrap();
@@ -53,26 +73,19 @@ impl Backup {
             .assign(&partitions)
             .expect("Couldnt assign consumer to topic");
 
-        Ok(Self {
-            _id: id,
-            consumer,
-            _offset_begin: offset_begin,
-            offset_end,
-            progress_bar,
-            sender,
-        })
-    }
-
-    pub fn start(self) {
         let mut last_offset = 0;
+        let mut last_offset_set = 0;
         let pb = self.progress_bar;
 
         let sender = self.sender.clone();
         let mut done = false;
         loop {
-            let mut kbatch = Vec::with_capacity(100);
-            for _ in 0..100 {
-                let rd_msg = self.consumer.poll(None);
+            let mut gzmsg = GzMsg {
+                data: Vec::with_capacity(1024),
+            };
+            let mut messages = 0;
+            for _ in 0..1000 {
+                let rd_msg = consumer.poll(None);
 
                 let rd_msg = match rd_msg {
                     Some(msg) => msg,
@@ -88,19 +101,30 @@ impl Backup {
                     break;
                 }
 
-                pb.inc((msg.offset() - last_offset) as u64);
-                pb.tick();
                 last_offset = msg.offset();
 
-                let _kmsg = kafka_message_new(
+                let kmsg = kafka_message_new(
                     msg.key().map(|slice| Vec::from(slice)),
                     msg.payload().map(|slice| Vec::from(slice)),
                     Some(msg.partition() as u32),
                     vec![],
                 );
-                kbatch.push(_kmsg);
+
+                gzmsg
+                    .data
+                    .append(&mut kafka_message_len(&kmsg).to_be_bytes().to_vec());
+                gzmsg.data.append(&mut kafka_message_pack(&kmsg));
+                messages += 1;
             }
-            sender.send(kbatch).unwrap();
+
+            pb.inc((last_offset - last_offset_set) as u64);
+            last_offset_set = last_offset;
+
+            {
+                let mut lock = self.messages_counter.lock().unwrap();
+                *lock += messages;
+            }
+            sender.send(gzmsg).unwrap();
             if done {
                 break;
             }
@@ -115,7 +139,7 @@ impl Backup {
 }
 
 pub fn backup(
-    n_wrk: usize,
+    mut n_wrk: usize,
     _brokers: String,
     topic_name: String,
     _file: String,
@@ -126,7 +150,8 @@ pub fn backup(
     header_pb.set_message(format!("Archive: {}", _file));
     let pb = mb.add(ProgressBar::new(0));
 
-    let (sender, gzhandler) = GzWriter::run(_file, pb)?;
+    let messages_counter = Arc::new(Mutex::new(0));
+    let (sender, gzhandler) = GzWriter::run(_file, pb, messages_counter.clone())?;
 
     // Connect to topic. Read medatada
     let context = BackupContext;
@@ -145,7 +170,9 @@ pub fn backup(
         return Err(AppError::TopicNotFound(topic_name));
     }
 
-    //mb.println("Processing partitions").unwrap();
+    if n_wrk == 0 || n_wrk > topic.partitions().len() {
+        n_wrk = topic.partitions().len();
+    }
 
     let mut vbackup = Vec::new();
     for part in topic.partitions() {
@@ -177,6 +204,7 @@ pub fn backup(
             offset_end,
             pb,
             sender.clone(),
+            messages_counter.clone(),
         )?;
         vbackup.push(b);
     }
@@ -207,9 +235,9 @@ pub fn backup(
 
     drop(sender);
     gzhandler.join().unwrap();
+
     header_pb.finish();
     header_pb2.finish();
-    drop(mb);
     Ok(())
 }
 

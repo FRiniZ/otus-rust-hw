@@ -4,6 +4,7 @@ mod gzwriter;
 mod protos;
 
 use std::fmt::Display;
+use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use log::info;
@@ -19,7 +20,7 @@ struct Args {
     cmd: Commands,
     #[arg(short, long, env("FILE"))]
     file: String,
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "0")]
     n_wrk: usize,
 }
 
@@ -40,7 +41,7 @@ impl Display for Commands {
     }
 }
 
-fn main() {
+fn main() -> ExitCode {
     env_logger::init();
 
     let _cli = Args::parse();
@@ -49,6 +50,7 @@ fn main() {
 
     info!("BOOTSTRAP_SERVERS: {}", _cli.bootstrap_servers);
     info!("TOPIC: {}", _cli.topic);
+    info!("N_WRK: {}", _cli.n_wrk);
     info!("Command: {}", _cli.cmd);
 
     let result = match _cli.cmd {
@@ -60,7 +62,7 @@ fn main() {
 
     if result.is_err() {
         println!("{:?}", result.unwrap_err().to_string());
+        return ExitCode::FAILURE;
     }
-
-    println!("Bye bye");
+    ExitCode::SUCCESS
 }

@@ -3,13 +3,12 @@ use flate2::Compression;
 use indicatif::{HumanBytes, ProgressBar, ProgressStyle};
 use std::io::BufWriter;
 use std::path::Path;
-use std::sync::mpsc::{sync_channel, SyncSender};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::{fs::File, io::Write};
 
 use crate::errors::AppError;
-use crate::protos::kafka_messages::{kafka_message_len, kafka_message_pack, KafkaMessage};
 
 struct ByteCounter<W> {
     inner: W,
@@ -44,13 +43,19 @@ where
 }
 
 #[derive(Debug)]
+pub struct GzMsg {
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug)]
 pub struct GzWriter {}
 
 impl GzWriter {
     pub fn run(
         pathfile: String,
         pb: ProgressBar,
-    ) -> Result<(SyncSender<Vec<KafkaMessage>>, JoinHandle<usize>), AppError> {
+        messages: Arc<Mutex<u64>>,
+    ) -> Result<(SyncSender<GzMsg>, JoinHandle<()>), AppError> {
         if Path::new(pathfile.as_str()).exists() {
             return Err(AppError::FileExists(pathfile));
         }
@@ -61,32 +66,31 @@ impl GzWriter {
             bytes_written.clone(),
         ));
 
-        let mut encoder = GzEncoder::new(writer, Compression::best());
+        let mut encoder = GzEncoder::new(writer, Compression::fast());
 
-        pb.set_style(ProgressStyle::with_template("{spinner:.green} archive size: {msg}").unwrap());
-        let (sender, receiver) = sync_channel(10);
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.green} {elapsed_precise} archive size: {msg}")
+                .unwrap(),
+        );
+        let (sender, receiver): (SyncSender<GzMsg>, Receiver<GzMsg>) = sync_channel(0);
 
-        let handle: JoinHandle<usize> = thread::spawn(move || {
-            let mut msg_count = 0;
-            for kbatch in receiver {
-                for kmsg in kbatch {
-                    msg_count += 1;
-                    let packed_size = kafka_message_len(&kmsg);
-                    let packed_data = kafka_message_pack(&kmsg);
-                    encoder.write_all(&packed_size.to_be_bytes()).unwrap();
-                    encoder.write_all(&packed_data).unwrap();
-                    let bytes = bytes_written.lock().unwrap();
-                    pb.set_message(format!(
-                        "{} messages processed: {}",
-                        HumanBytes(*bytes),
-                        msg_count
-                    ));
-                    pb.tick();
-                }
+        let handle: JoinHandle<()> = thread::spawn(move || {
+            let mut bytes: u64;
+            let mut msg_count: u64;
+            for gzmsg in receiver {
+                //encoder.write_all(&gzmsg.data).unwrap();
+                encoder.write(&gzmsg.data).unwrap();
+                bytes = *bytes_written.lock().unwrap();
+                msg_count = *messages.lock().unwrap();
+                pb.set_message(format!(
+                    "{} messages processed: {}",
+                    HumanBytes(bytes),
+                    msg_count
+                ));
+                pb.tick();
             }
             encoder.finish().unwrap();
             pb.finish();
-            msg_count
         });
 
         Ok((sender, handle))

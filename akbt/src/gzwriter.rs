@@ -10,7 +10,7 @@ use std::{fs::File, io::Write};
 
 use crate::errors::AppError;
 
-struct ByteCounter<W> {
+pub struct ByteCounter<W> {
     inner: W,
     count: Arc<Mutex<u64>>,
 }
@@ -19,7 +19,7 @@ impl<W> ByteCounter<W>
 where
     W: Write,
 {
-    fn new(inner: W, count: Arc<Mutex<u64>>) -> Self {
+    pub fn new(inner: W, count: Arc<Mutex<u64>>) -> Self {
         ByteCounter { inner, count }
     }
 }
@@ -54,6 +54,7 @@ impl GzWriter {
     pub fn run(
         pathfile: String,
         pb: ProgressBar,
+        level: u32,
         messages: Arc<Mutex<u64>>,
     ) -> Result<(SyncSender<GzMsg>, JoinHandle<()>), AppError> {
         if Path::new(pathfile.as_str()).exists() {
@@ -66,7 +67,7 @@ impl GzWriter {
             bytes_written.clone(),
         ));
 
-        let mut encoder = GzEncoder::new(writer, Compression::fast());
+        let mut encoder = GzEncoder::new(writer, Compression::new(level));
 
         pb.set_style(
             ProgressStyle::with_template("{spinner:.green} {elapsed_precise} archive size: {msg}")
@@ -79,7 +80,7 @@ impl GzWriter {
             let mut msg_count: u64;
             for gzmsg in receiver {
                 //encoder.write_all(&gzmsg.data).unwrap();
-                encoder.write(&gzmsg.data).unwrap();
+                encoder.write_all(&gzmsg.data).unwrap();
                 bytes = *bytes_written.lock().unwrap();
                 msg_count = *messages.lock().unwrap();
                 pb.set_message(format!(

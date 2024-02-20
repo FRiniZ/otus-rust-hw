@@ -143,6 +143,7 @@ pub fn backup(
     _brokers: String,
     topic_name: String,
     _file: String,
+    level: u32,
 ) -> Result<(), AppError> {
     let mb = MultiProgress::new();
     let header_pb =
@@ -151,7 +152,7 @@ pub fn backup(
     let pb = mb.add(ProgressBar::new(0));
 
     let messages_counter = Arc::new(Mutex::new(0));
-    let (sender, gzhandler) = GzWriter::run(_file, pb, messages_counter.clone())?;
+    let (sender, gzhandler) = GzWriter::run(_file, pb, level, messages_counter.clone())?;
 
     // Connect to topic. Read medatada
     let context = BackupContext;
@@ -215,6 +216,8 @@ pub fn backup(
         ProgressBar::new(0).with_style(ProgressStyle::with_template("{msg}").unwrap()),
     );
     header_pb2.set_message("Processing partitions");
+    header_pb.finish();
+    header_pb2.finish();
 
     while vbackup.len() > 0 {
         let mut vhandle = Vec::new();
@@ -236,8 +239,6 @@ pub fn backup(
     drop(sender);
     gzhandler.join().unwrap();
 
-    header_pb.finish();
-    header_pb2.finish();
     Ok(())
 }
 

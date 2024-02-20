@@ -22,6 +22,9 @@ struct Args {
     file: String,
     #[arg(short, long, default_value = "0")]
     n_wrk: usize,
+    ///Compression level <0-9>(none-the_best)
+    #[arg(short, long, default_value = "0")]
+    level: u32,
 }
 
 #[derive(Subcommand, Debug, Clone)]
@@ -54,9 +57,13 @@ fn main() -> ExitCode {
     info!("Command: {}", _cli.cmd);
 
     let result = match _cli.cmd {
-        Commands::Backup => {
-            backup::backup(_cli.n_wrk, _cli.bootstrap_servers, _cli.topic, _cli.file)
-        }
+        Commands::Backup => backup::backup(
+            _cli.n_wrk,
+            _cli.bootstrap_servers,
+            _cli.topic,
+            _cli.file,
+            _cli.level,
+        ),
         Commands::Restore => todo!(),
     };
 

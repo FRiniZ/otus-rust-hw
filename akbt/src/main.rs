@@ -1,13 +1,17 @@
 mod backup;
+mod counters;
 mod errors;
-mod gzwriter;
+mod gzip;
+mod mbprocess;
 mod protos;
+mod restore;
 
 use std::fmt::Display;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use log::info;
+use std::env;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -20,8 +24,6 @@ struct Args {
     cmd: Commands,
     #[arg(short, long, env("FILE"))]
     file: String,
-    #[arg(short, long, default_value = "0")]
-    n_wrk: usize,
     ///Compression level <0-9>(none-the_best)
     #[arg(short, long, default_value = "0")]
     level: u32,
@@ -47,24 +49,25 @@ impl Display for Commands {
 fn main() -> ExitCode {
     env_logger::init();
 
-    let _cli = Args::parse();
+    let log_enabled = if let Ok(_) = env::var("RUST_LOG") {
+        true
+    } else {
+        false
+    };
+
+    let c = Args::parse();
 
     info!("Another Kafka Backup Tool starting...");
 
-    info!("BOOTSTRAP_SERVERS: {}", _cli.bootstrap_servers);
-    info!("TOPIC: {}", _cli.topic);
-    info!("N_WRK: {}", _cli.n_wrk);
-    info!("Command: {}", _cli.cmd);
+    info!("BOOTSTRAP_SERVERS: {}", c.bootstrap_servers);
+    info!("TOPIC: {}", c.topic);
+    info!("Command: {}", c.cmd);
 
-    let result = match _cli.cmd {
-        Commands::Backup => backup::backup(
-            _cli.n_wrk,
-            _cli.bootstrap_servers,
-            _cli.topic,
-            _cli.file,
-            _cli.level,
-        ),
-        Commands::Restore => todo!(),
+    let result = match c.cmd {
+        Commands::Backup => {
+            backup::backup(c.bootstrap_servers, c.topic, c.file, c.level, log_enabled)
+        }
+        Commands::Restore => restore::restore(c.bootstrap_servers, c.topic, c.file, log_enabled),
     };
 
     if result.is_err() {

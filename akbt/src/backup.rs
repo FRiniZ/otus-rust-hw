@@ -120,19 +120,19 @@ fn consumer_task(
 }
 
 pub fn backup(
-    _brokers: String,
+    brokers: String,
     topic_name: String,
-    _file: String,
+    file: String,
     level: u32,
     log_enabled: bool,
 ) -> Result<(), AppError> {
     let messages_counter = Arc::new(std::sync::Mutex::new(Counter { messages: 0 }));
-    let (sender2encoder, encoder_handler) = GzWriter::run(_file + ".gz", level)?;
+    let (sender2encoder, encoder_handler) = GzWriter::run(file, level)?;
 
     // Connect to topic. Read medatada
     let context = BackupContext;
     let consumer: BaseConsumer<BackupContext> = ClientConfig::new()
-        .set("bootstrap.servers", &_brokers)
+        .set("bootstrap.servers", &brokers)
         .set("enable.auto.offset.store", "false")
         .set("enable.auto.commit", "false")
         .set("auto.offset.reset", "beginning")

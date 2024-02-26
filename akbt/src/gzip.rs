@@ -24,10 +24,12 @@ pub struct GzMsg {
 pub struct GzWriter {}
 
 impl GzWriter {
-    pub fn run(
-        pathfile: String,
-        level: u32,
-    ) -> Result<(SyncSender<GzMsg>, JoinHandle<()>), AppError> {
+    pub fn run(file: String, level: u32) -> Result<(SyncSender<GzMsg>, JoinHandle<()>), AppError> {
+        let pathfile = match Path::new(&file).extension() {
+            Some(_) => file,
+            None => file + ".gz",
+        };
+
         if Path::new(pathfile.as_str()).exists() {
             return Err(AppError::FileExists(pathfile));
         }

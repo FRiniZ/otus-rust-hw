@@ -1,7 +1,7 @@
-use std::{io::Read, io::Write, sync::atomic::AtomicUsize};
-pub struct Counter {
-    pub messages: u64,
-}
+use std::{
+    io::{Read, Write},
+    sync::atomic::AtomicUsize,
+};
 
 pub struct ByteCounter<'a, W> {
     inner: W,

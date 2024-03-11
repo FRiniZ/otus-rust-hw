@@ -1,7 +1,7 @@
 use flate2::bufread::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use log::{error, info};
+use log::info;
 use std::io::{self, BufReader, BufWriter, Read};
 use std::path::Path;
 use std::sync::atomic::AtomicUsize;
@@ -58,6 +58,30 @@ impl GzWriter {
 pub struct GzReader {}
 
 impl GzReader {
+    fn read_msg(mut reader: impl Read) -> Result<KafkaMessage, AppError> {
+        let mut buf_size: [u8; 8] = [0; 8];
+        let msg_size: usize;
+        let res = reader.read_exact(&mut buf_size);
+
+        match res {
+            Ok(_) => (),
+            Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => {
+                return Err(AppError::EOF);
+            }
+            Err(e) => {
+                panic!("Closed by {:?}", e);
+            }
+        }
+        msg_size = usize::from_be_bytes(buf_size);
+        let mut msg_body = vec![0; msg_size];
+        let res = reader.read_exact(&mut msg_body);
+        if let Err(e) = res {
+            panic!("Closed by {:?}", e);
+        }
+        let kmsg = kafka_message_unpack(&msg_body).unwrap();
+        Ok(kmsg)
+    }
+
     pub fn run(
         pathfile: String,
         mb: Arc<Mutex<MProgressBars>>,
@@ -66,7 +90,10 @@ impl GzReader {
             return Err(AppError::FileNotExists(pathfile));
         }
 
-        let metadata = std::fs::metadata(&pathfile)?;
+        let metadata = match std::fs::metadata(&pathfile) {
+            Ok(m) => m,
+            Err(e) => return Err(AppError::IoError(e.to_string())),
+        };
 
         let file_size = metadata.len();
         info!("File size: {}", file_size);
@@ -86,37 +113,22 @@ impl GzReader {
             loop {
                 let mut batch = Vec::with_capacity(1000);
                 for _ in 0..1000 {
-                    let mut buf_size: [u8; 8] = [0; 8];
-                    let msg_size: usize;
-                    let res = decoder.read_exact(&mut buf_size);
-
-                    match res {
-                        Ok(_) => (),
-                        Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => {
-                            info!("EOF");
+                    match GzReader::read_msg(&mut decoder) {
+                        Ok(kmsg) => {
+                            batch.push(kmsg);
+                        }
+                        Err(_) => {
                             last_batch = true;
                             break;
                         }
-                        Err(e) => {
-                            panic!("Closed by {:?}", e);
-                        }
                     }
-
-                    msg_size = usize::from_be_bytes(buf_size);
-                    let mut msg_body = vec![0; msg_size];
-                    let res = decoder.read_exact(&mut msg_body);
-                    if let Err(e) = res {
-                        error!("Closed by {:?}", e);
-                        break;
-                    }
-                    let kmsg = kafka_message_unpack(&msg_body).unwrap();
-                    batch.push(kmsg);
-
-                    mb.lock().unwrap().update(
-                        0,
-                        bytes_read.load(std::sync::atomic::Ordering::Relaxed) as i64,
-                    );
                 }
+
+                mb.lock().unwrap().update(
+                    0,
+                    bytes_read.load(std::sync::atomic::Ordering::Relaxed) as i64,
+                );
+
                 sender.send(batch).unwrap();
                 if last_batch {
                     break;

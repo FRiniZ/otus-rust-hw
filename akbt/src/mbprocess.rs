@@ -3,7 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use indicatif::{HumanCount, MultiProgress, ProgressBar, ProgressFinish, ProgressStyle};
 use std::sync::Mutex;
+use std::thread;
+use std::time;
 
+use crate::{consumer::MyConsumer, errors::AppError};
 type PartitionID = i32;
 
 struct PartitionItem {
@@ -40,9 +43,19 @@ pub struct MProgressBars {
 }
 
 impl MProgressBars {
-    pub fn backup(topic: String, count: usize, hidden: bool) -> Arc<Mutex<Self>> {
+    pub fn ticker(mpb: Arc<Mutex<MProgressBars>>) {
+        let hidden = mpb.lock().unwrap().hidden;
+        if !hidden {
+            thread::spawn(move || loop {
+                thread::sleep(time::Duration::from_millis(100));
+                mpb.lock().unwrap().tick();
+            });
+        }
+    }
+
+    pub fn backup(consumer: &MyConsumer, hidden: bool) -> Result<Arc<Mutex<Self>>, AppError> {
         let mb = MultiProgress::new();
-        let hashmap: HashMapPartitions = HashMap::with_capacity(count);
+        let hashmap: HashMapPartitions = HashMap::new();
 
         let header1 = if hidden {
             mb.add(ProgressBar::hidden())
@@ -51,7 +64,8 @@ impl MProgressBars {
                 ProgressBar::new(0).with_style(ProgressStyle::with_template(PB_HEADER_B1).unwrap()),
             );
 
-            pb.set_message(topic);
+            let topic_name = consumer.topic_name().to_string();
+            pb.set_message(topic_name);
             pb.finish();
             pb
         };
@@ -62,7 +76,7 @@ impl MProgressBars {
             let pb = mb.add(
                 ProgressBar::new(0).with_style(ProgressStyle::with_template(PB_HEADER_B2).unwrap()),
             );
-            pb.set_length(count as u64);
+            pb.set_length(consumer.partitions() as u64);
             pb
         };
 
@@ -86,7 +100,7 @@ impl MProgressBars {
             pb
         };
 
-        Arc::new(Mutex::new(Self {
+        let mut mpb = Self {
             mb,
             action: Action::Backup,
             hashmap,
@@ -95,7 +109,14 @@ impl MProgressBars {
             header2,
             header3,
             progressbar,
-        }))
+        };
+
+        for part_idx in 0..consumer.partitions() {
+            let (offset_begin, offset_end) = consumer.offsets(part_idx)?;
+            mpb.add_pb(part_idx as i32, offset_begin, offset_end);
+        }
+
+        Ok(Arc::new(Mutex::new(mpb)))
     }
 
     pub fn restore(topic: String, file: String, hidden: bool) -> Arc<Mutex<Self>> {

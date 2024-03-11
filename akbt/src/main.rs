@@ -1,4 +1,5 @@
 mod backup;
+mod consumer;
 mod counters;
 mod errors;
 mod gzip;

@@ -69,6 +69,7 @@ pub fn restore(
 
     decoder_handler.join().unwrap();
     prod_handler.join().unwrap();
+    mb.lock().unwrap().finish();
     Ok(())
 }
 
